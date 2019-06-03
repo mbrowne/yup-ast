@@ -4,11 +4,7 @@ import { getCustomValidator } from './custom.validators';
 
 let DEBUG = false;
 
-class ValidationError {
-    constructor(message) {
-        this.message = message;
-    }
-}
+class ValidationError extends Error {}
 
 /**
  * Allows setting of debugger for certain tests.
@@ -46,7 +42,7 @@ function getSubString(string, substring) {
  */
 function getYupFunction(functionName, previousInstance = yup) {
     // Make sure we're dealing with a string
-    if (functionName instanceof Array) {
+    if (Array.isArray(functionName)) {
         functionName = functionName[0];
     }
 
@@ -57,11 +53,11 @@ function getYupFunction(functionName, previousInstance = yup) {
     }
 
     const yupName = getSubString(functionName, 'yup.');
-    if (yupName && previousInstance[yupName] instanceof Function) {
+    if (yupName && typeof previousInstance[yupName] === 'function') {
         return previousInstance[yupName].bind(previousInstance);
     }
 
-    if (yupName && yup[yupName] instanceof Function) {
+    if (yupName && typeof yup[yupName] === 'function') {
         return yup[yupName].bind(yup);
     }
 
@@ -75,7 +71,7 @@ function getYupFunction(functionName, previousInstance = yup) {
  * @returns {boolean} True if we are actually looking at prefix notation.
  */
 function isPrefixNotation([functionName]) {
-    if (functionName instanceof Array) {
+    if (Array.isArray(functionName)) {
         if (isPrefixNotation(functionName)) return true;
     }
 
@@ -91,7 +87,7 @@ function isPrefixNotation([functionName]) {
  * @returns {array} forced to array.
  */
 function ensureArray(maybeArray) {
-    if (maybeArray instanceof Array === false) {
+    if (!Array.isArray(maybeArray)) {
         return [maybeArray];
     }
 
@@ -111,11 +107,11 @@ function convertArray(arrayArgument, previousInstance = yup) {
     // Handle the case when we have a previous instance
     // but we don't want to use it for this transformation
     // [['yup.array'], ['yup.of', [['yup.object'], ['yup.shape'] ...]]]
-    if (functionName instanceof Array) {
+    if (Array.isArray(functionName)) {
         return transformArray(arrayArgument);
     }
 
-    const gotFunc = getYupFunction(functionName, previousInstance, arrayArgument);
+    const gotFunc = getYupFunction(functionName, previousInstance);
 
     // Here we'll actually call the function
     // This might be something like yup.number().min(5)
@@ -125,7 +121,7 @@ function convertArray(arrayArgument, previousInstance = yup) {
     const convertedArguments = transformAll(argsToPass, previousInstance);
 
     // Handle the case when we've got an array of empty elements
-    if (convertedArguments instanceof Array) {
+    if (Array.isArray(convertedArguments)) {
         if (convertedArguments.filter(i => i).length < 1) {
             return gotFunc();
         }
@@ -145,17 +141,17 @@ function convertArray(arrayArgument, previousInstance = yup) {
  * @returns {array} Array with same keys, but values as yup validators.
  */
 function transformArray(jsonArray, previousInstance = yup) {
-    let toReturn = convertArray(jsonArray[0]);
+    let toReturn = convertArray(jsonArray[0], previousInstance);
 
     jsonArray.slice(1).forEach(item => {
         // Found an array, move to prefix extraction
-        if (item instanceof Array) {
+        if (Array.isArray(item)) {
             toReturn = convertArray(item, toReturn);
             return;
         }
 
         // Found an object, move to object extraction
-        if (item instanceof Object) {
+        if (item === 'object') {
             toReturn = transformObject(item, previousInstance);
             return;
         }
@@ -163,7 +159,7 @@ function transformArray(jsonArray, previousInstance = yup) {
         // Handle an edge case where we have something like
         // [['yup.ref', 'linkName'], 'custom error'], and we don't want
         // to consume 'custom error as a variable yet'
-        if (toReturn instanceof Array) {
+        if (Array.isArray(toReturn)) {
             toReturn = toReturn.concat(item);
             return;
         }
@@ -185,13 +181,13 @@ export function transformObject(jsonObject, previousInstance = yup) {
 
     Object.entries(jsonObject).forEach(([key, value]) => {
         // Found an array move to array extraction
-        if (value instanceof Array) {
+        if (Array.isArray(value)) {
             toReturn[key] = transformArray(value, previousInstance);
             return;
         }
 
         // Found an object recursive extraction
-        if (value instanceof Object) {
+        if (typeof value === 'object') {
             toReturn[key] = transformObject(value, previousInstance);
             return;
         }
@@ -211,7 +207,7 @@ export function transformAll(jsonObjectOrArray, previousInstance = yup) {
     // We're dealing with an array
     // This could be a prefix notation function
     // If so, we'll call the converter
-    if (jsonObjectOrArray instanceof Array) {
+    if (Array.isArray(jsonObjectOrArray)) {
         if (isPrefixNotation(jsonObjectOrArray)) {
             return transformArray(jsonObjectOrArray, previousInstance);
         }
@@ -222,7 +218,7 @@ export function transformAll(jsonObjectOrArray, previousInstance = yup) {
     // If we're dealing with an object
     // we should check each of the values for that object.
     // Some of them may also be prefix notation functiosn
-    if (jsonObjectOrArray instanceof Object) {
+    if (typeof jsonObjectOrArray === 'object') {
         return transformObject(jsonObjectOrArray, previousInstance);
     }
 
@@ -239,7 +235,7 @@ export function transformAll(jsonObjectOrArray, previousInstance = yup) {
  */
 export function transform(jsonObjectOrArray) {
     try {
-        if (jsonObjectOrArray instanceof Object) {
+        if (!Array.isArray(jsonObjectOrArray)) {
             return transformAll([
                 // build a custom validator which takes an object as parameter
                 // If we don't do this, we'll get back an object of validators

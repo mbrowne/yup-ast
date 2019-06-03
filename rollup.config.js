@@ -7,11 +7,6 @@ export default {
             file: './dist/' + pkg.main,
             format: 'cjs',
             sourcemap: true,
-        },
-        {
-            file: './dist/' + pkg.module,
-            format: 'esm',
-            sourcemap: true,
         }
     ],
     external: ['yup']

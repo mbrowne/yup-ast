@@ -4,11 +4,7 @@ import { getCustomValidator } from './custom.validators';
 
 let DEBUG = false;
 
-class ValidationError {
-    constructor(message) {
-        this.message = message;
-    }
-}
+class ValidationError extends Error {}
 
 /**
  * Allows setting of debugger for certain tests.

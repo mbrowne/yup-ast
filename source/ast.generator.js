@@ -145,7 +145,7 @@ function convertArray(arrayArgument, previousInstance = yup) {
  * @returns {array} Array with same keys, but values as yup validators.
  */
 function transformArray(jsonArray, previousInstance = yup) {
-    let toReturn = convertArray(jsonArray[0]);
+    let toReturn = convertArray(jsonArray[0], previousInstance);
 
     jsonArray.slice(1).forEach(item => {
         // Found an array, move to prefix extraction
@@ -239,7 +239,7 @@ export function transformAll(jsonObjectOrArray, previousInstance = yup) {
  */
 export function transform(jsonObjectOrArray) {
     try {
-        if (jsonObjectOrArray instanceof Object) {
+        if (!Array.isArray(jsonObjectOrArray)) {
             return transformAll([
                 // build a custom validator which takes an object as parameter
                 // If we don't do this, we'll get back an object of validators

@@ -113,6 +113,16 @@ function convertArray(arrayArgument, previousInstance = yup) {
 
     const gotFunc = getYupFunction(functionName, previousInstance);
 
+    // Special case: matches() expects a regex as the first argument;
+    // need to convert to regex if a string was passed
+    if (functionName === 'yup.matches' && typeof argsToPass[0] !== 'object') {
+        const [regexString] = argsToPass
+        if (typeof regexString !== 'string') {
+            throw new ValidationError('The first argument to matches() must be either a RegExp or a string')
+        }
+        argsToPass[0] = new RegExp(regexString)
+    }
+
     // Here we'll actually call the function
     // This might be something like yup.number().min(5)
     // We could be passing different types of arguments here
@@ -218,12 +228,16 @@ export function transformAll(jsonObjectOrArray, previousInstance = yup) {
     // If we're dealing with an object
     // we should check each of the values for that object.
     // Some of them may also be prefix notation functiosn
-    if (typeof jsonObjectOrArray === 'object') {
+    if (typeof jsonObjectOrArray === 'object' && !isRegExp(jsonObjectOrArray)) {
         return transformObject(jsonObjectOrArray, previousInstance);
     }
 
     // No case here, just return anything else
     return jsonObjectOrArray;
+}
+
+function isRegExp(obj) {
+    return Object.prototype.toString.call(obj) === '[object RegExp]'
 }
 
 /**
